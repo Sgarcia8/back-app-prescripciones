@@ -15,7 +15,7 @@ import { JwtStrategy } from './jwt.strategy';
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET ?? 'dev-access-secret-change-me',
       signOptions: {
-        expiresIn: process.env.JWT_ACCESS_EXPIRES ?? '15m',
+        expiresIn: Number(process.env.JWT_ACCESS_EXPIRES_SEC ?? 900),
       },
     }),
   ],

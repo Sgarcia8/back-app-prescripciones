@@ -19,8 +19,8 @@ export class AuthService {
     process.env.JWT_ACCESS_SECRET ?? 'dev-access-secret-change-me';
   private readonly refreshSecret =
     process.env.JWT_REFRESH_SECRET ?? 'dev-refresh-secret-change-me';
-  private readonly accessExpires = process.env.JWT_ACCESS_EXPIRES ?? '15m';
-  private readonly refreshExpires = process.env.JWT_REFRESH_EXPIRES ?? '7d';
+  private readonly accessExpiresSec = Number(process.env.JWT_ACCESS_EXPIRES_SEC ?? 900);
+  private readonly refreshExpiresSec = Number(process.env.JWT_REFRESH_EXPIRES_SEC ?? 604800);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -32,16 +32,22 @@ export class AuthService {
   }
 
   private signAccess(payload: JwtPayload): Promise<string> {
-    return this.jwtService.signAsync(payload as object, {
-      secret: this.accessSecret,
-      expiresIn: this.accessExpires,
-    });
+    return this.jwtService.signAsync(
+      { sub: payload.sub, role: payload.role },
+      {
+        secret: this.accessSecret,
+        expiresIn: this.accessExpiresSec,
+      },
+    );
   }
 
   private signRefresh(userId: number, role: Role): Promise<string> {
     return this.jwtService.signAsync(
-      { sub: userId, role } as object,
-      { secret: this.refreshSecret, expiresIn: this.refreshExpires },
+      { sub: userId, role },
+      {
+        secret: this.refreshSecret,
+        expiresIn: this.refreshExpiresSec,
+      },
     );
   }
 

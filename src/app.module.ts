@@ -1,17 +1,27 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma.module';
+import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
-import { PatientsModule } from './patients/patients.module';
-import { DoctorsModule } from './doctors/doctors.module';
 import { CommonModule } from './common/common.module';
-import { PrescriptionsController } from './prescriptions/prescriptions.controller';
+import { DoctorsModule } from './doctors/doctors.module';
+import { PatientsModule } from './patients/patients.module';
+import { PrescriptionsModule } from './prescriptions/prescriptions.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, UsersModule, PatientsModule, DoctorsModule, CommonModule],
-  controllers: [AppController, PrescriptionsController],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    UsersModule,
+    PatientsModule,
+    DoctorsModule,
+    PrescriptionsModule,
+    AdminModule,
+    CommonModule,
+  ],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
