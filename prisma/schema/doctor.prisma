@@ -1,0 +1,8 @@
+model Doctor {
+
+    id Int @id @default(autoincrement())
+    user User @relation(fields: [userId], references: [id])
+    userId Int @unique
+    speciality String?
+    prescriptions Prescription[]
+}

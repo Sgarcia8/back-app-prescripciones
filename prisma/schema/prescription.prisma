@@ -1,0 +1,34 @@
+model Prescription {
+    id Int @id @default(autoincrement())
+    code String @unique
+    status PrescriptionStatus @default(pending)
+    notes String?
+    createdAt DateTime @default(now())
+    consumedAt DateTime?
+
+    Patient Patient @relation(fields: [patientId], references: [id])
+    patientId Int
+    author Doctor @relation(fields: [authorId], references: [id])
+    authorId Int
+    items PrescriptionItem[]
+
+    @@index([authorId, createdAt])
+    @@index([patientId, createdAt])
+    @@index([status])
+}
+
+enum PrescriptionStatus {
+    pending
+    consumed
+    expired
+}
+
+model PrescriptionItem {
+    id Int @id @default(autoincrement())
+    prescription Prescription @relation(fields: [prescriptionId], references: [id])
+    prescriptionId Int
+    name String
+    dosage String?
+    quantity Int?
+    instructions String?
+}

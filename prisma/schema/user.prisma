@@ -1,0 +1,28 @@
+model User {
+    id Int @id @default(autoincrement())
+    email String @unique
+    password String
+    name String
+    role Role
+    createdAt DateTime @default(now())
+    doctor Doctor?
+    patient Patient?
+    refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+    id Int @id @default(autoincrement())
+    tokenHash String @unique
+    userId Int
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    expiresAt DateTime
+    createdAt DateTime @default(now())
+
+    @@index([userId])
+}
+
+enum Role {
+    admin
+    doctor
+    patient
+}
