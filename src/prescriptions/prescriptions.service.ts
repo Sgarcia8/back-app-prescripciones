@@ -4,9 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrescriptionStatus, Prisma } from '../../generated/prisma/client';
+import { PrescriptionStatus, Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import PDFDocument from 'pdfkit';
+import QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import {
@@ -144,6 +145,22 @@ export class PrescriptionsService {
     return { data, total, page, limit };
   }
 
+  async findOneForPatient(userId: number, id: number) {
+    const patient = await this.prisma.patient.findUnique({ where: { userId } });
+    if (!patient) {
+      throw new ForbiddenException('Patient profile required');
+    }
+
+    const rx = await this.prisma.prescription.findFirst({
+      where: { id, patientId: patient.id },
+      include: includeFull,
+    });
+    if (!rx) {
+      throw new NotFoundException('Prescription not found');
+    }
+    return rx;
+  }
+
   async consumeForPatient(userId: number, id: number) {
     const patient = await this.prisma.patient.findUnique({ where: { userId } });
     if (!patient) {
@@ -176,44 +193,111 @@ export class PrescriptionsService {
     const rx = await this.prisma.prescription.findFirst({
       where: { id, patientId: patient.id },
       include: {
-        items: true,
-        author: { include: { user: { select: { name: true } } } },
+        items: { orderBy: { id: 'asc' } },
+        Patient: {
+          include: {
+            user: { select: { name: true, email: true } },
+          },
+        },
+        author: {
+          include: {
+            user: { select: { name: true, email: true } },
+          },
+        },
       },
     });
     if (!rx) {
       throw new NotFoundException('Prescription not found');
     }
 
-    return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ margin: 50 });
+    const baseRaw = process.env.FRONTEND_BASE_URL?.trim();
+    const base = baseRaw?.replace(/\/+$/, '') ?? '';
+    let qrPng: Buffer | null = null;
+    if (base) {
+      try {
+        qrPng = await QRCode.toBuffer(`${base}/patient/prescriptions/${id}`, {
+          type: 'png',
+          width: 160,
+          margin: 1,
+        });
+      } catch {
+        qrPng = null;
+      }
+    }
+
+    const locale = 'es-ES';
+    const fechaEmision = rx.createdAt.toLocaleString(locale, {
+      dateStyle: 'long',
+      timeStyle: 'short',
+    });
+    const birthHuman = rx.Patient.birthDate
+      ? rx.Patient.birthDate.toLocaleDateString(locale, { dateStyle: 'long' })
+      : '—';
+
+    return new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50, size: 'A4' });
       const chunks: Buffer[] = [];
       doc.on('data', (c: Buffer) => chunks.push(c));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
       doc.fontSize(18).text('Prescripción médica', { align: 'center' });
-      doc.moveDown();
-      doc.fontSize(11);
+      doc.moveDown(1.2);
+
+      doc.fontSize(12).font('Helvetica-Bold').text('Paciente');
+      doc.font('Helvetica').fontSize(10);
+      doc.text(`Nombre: ${rx.Patient.user.name}`);
+      doc.text(`Email: ${rx.Patient.user.email}`);
+      doc.text(`Fecha de nacimiento: ${birthHuman}`);
+
+      doc.moveDown(0.8);
+      doc.fontSize(12).font('Helvetica-Bold').text('Médico');
+      doc.font('Helvetica').fontSize(10);
+      doc.text(`Nombre: ${rx.author.user.name}`);
+      doc.text(`Email: ${rx.author.user.email}`);
+      doc.text(
+        `Especialidad: ${rx.author.speciality?.trim() ? rx.author.speciality : '—'}`,
+      );
+
+      doc.moveDown(0.8);
+      doc.fontSize(12).font('Helvetica-Bold').text('Prescripción');
+      doc.font('Helvetica').fontSize(10);
       doc.text(`Código: ${rx.code}`);
       doc.text(`Estado: ${rx.status}`);
-      doc.text(`Paciente ID: ${rx.patientId}`);
-      doc.text(`Médico: ${rx.author.user.name}`);
-      doc.text(`Fecha: ${rx.createdAt.toISOString()}`);
-      if (rx.notes) {
-        doc.moveDown();
-        doc.text(`Notas: ${rx.notes}`);
+      doc.text(`Fecha: ${fechaEmision}`);
+
+      if (rx.notes?.trim()) {
+        doc.moveDown(0.5);
+        doc.font('Helvetica-Bold').text('Notas clínicas:');
+        doc.font('Helvetica').text(rx.notes, { align: 'left' });
       }
-      doc.moveDown();
-      doc.fontSize(12).text('Medicación', { underline: true });
-      doc.moveDown(0.5);
-      doc.fontSize(10);
-      for (const item of rx.items) {
-        doc.text(`• ${item.name}`, { continued: false });
-        if (item.dosage) doc.text(`  Dosis: ${item.dosage}`);
-        if (item.quantity != null) doc.text(`  Cantidad: ${item.quantity}`);
-        if (item.instructions) doc.text(`  Indicaciones: ${item.instructions}`);
-        doc.moveDown(0.3);
+
+      doc.moveDown(0.9);
+      doc.fontSize(12).font('Helvetica-Bold').text('Medicación');
+      doc.font('Helvetica').fontSize(10);
+      doc.moveDown(0.3);
+
+      rx.items.forEach((item, i) => {
+        doc.font('Helvetica-Bold').text(`${i + 1}. ${item.name}`);
+        doc.font('Helvetica');
+        doc.text(`Dosis: ${item.dosage ?? '—'}`, { indent: 12 });
+        doc.text(`Cantidad: ${item.quantity != null ? String(item.quantity) : '—'}`, {
+          indent: 12,
+        });
+        doc.text(`Instrucciones: ${item.instructions ?? '—'}`, { indent: 12 });
+        doc.moveDown(0.45);
+      });
+
+      if (qrPng) {
+        doc.moveDown(0.5);
+        doc.fontSize(9).fillColor('#444444');
+        doc.text('Consulta esta receta en la app (código QR):', { align: 'left' });
+        doc.fillColor('#000000');
+        const qrTop = doc.y + 4;
+        doc.image(qrPng, 50, qrTop, { width: 120 });
+        doc.text('', 50, qrTop + 128);
       }
+
       doc.end();
     });
   }

@@ -1,98 +1,136 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Prescripciones — Backend (API)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST con NestJS para usuarios (admin, médico, paciente), autenticación JWT, prescripciones, PDF y QR. Persistencia con PostgreSQL vía Prisma.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
 
-## Description
+| Tecnología | Uso |
+|------------|-----|
+| [NestJS](https://nestjs.com) 11 | Framework HTTP, módulos, guards |
+| [Prisma](https://www.prisma.io) 7 + PostgreSQL | ORM y migraciones |
+| `pg` + `@prisma/adapter-pg` | Driver y adapter |
+| [Passport JWT](https://docs.nestjs.com/security/authentication) | Validación de access token |
+| `class-validator` / `class-transformer` | Validación de DTOs |
+| `bcrypt` | Hash de contraseñas |
+| [pdfkit](http://pdfkit.org/) | Generación de PDF de recetas |
+| `qrcode` | Códigos QR en documentos |
+| [@nestjs/swagger](https://docs.nestjs.com/openapi/introduction) | OpenAPI + UI Swagger |
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Requisitos
 
-## Project setup
+- **Node.js** ≥ 20.19 (ver `engines` en `package.json`)
+- **PostgreSQL**
+- **npm**
+
+## Instalación
 
 ```bash
-$ npm install
+npm install
 ```
 
-## Compile and run the project
+Definir variables de entorno (ver tabla siguiente). Crear la base y ejecutar migraciones:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run db:migrate
 ```
 
-## Run tests
+Opcional — datos de demo:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run db:seed
 ```
 
-## Deployment
+## Arranque
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+| Comando | Descripción |
+|---------|-------------|
+| `npm run start:dev` | Desarrollo con recarga |
+| `npm run start` | Una ejecución sin watch |
+| `npm run start:prod` | Producción (`node dist/main`) |
+| `npm run build` | Compila a `dist/` |
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Puertos y convivencia con Next.js
+
+Por defecto Nest escucha `PORT` o **3000**. El frontend de este monorepo suele usar **3000**, así que en local conviene levantar el API en otro puerto (p. ej. **3001**) y apuntar `NEXT_PUBLIC_API_URL` del front a esa URL.
+
+## Variables de entorno
+
+| Variable | Descripción |
+|----------|-------------|
+| `DATABASE_URL` | Cadena de conexión PostgreSQL (requerida para Prisma y seed). |
+| `PORT` | Puerto HTTP (ej. `3001` en local junto a Next en 3000). |
+| `CORS_ORIGIN` | Orígenes permitidos, separados por coma. Por defecto incluye `http://localhost:3000`. |
+| `JWT_ACCESS_SECRET` | Secreto para firmar access tokens (en prod obligatorio cambiar el default). |
+| `JWT_REFRESH_SECRET` | Secreto para refresh tokens. |
+| `JWT_ACCESS_EXPIRES_SEC` | TTL access token en segundos (default 900). |
+| `JWT_REFRESH_EXPIRES_SEC` | TTL refresh token en segundos (default 604800). |
+| `FRONTEND_BASE_URL` | URL del front (enlaces / QR en prescripciones). |
+| `ENABLE_SWAGGER` | Si es `true`, Swagger está activo aunque `NODE_ENV=production`. Si no se define: Swagger activo salvo en producción. |
+
+## Documentación OpenAPI (Swagger)
+
+Con el servidor en marcha:
+
+- **URL**: `http://localhost:<PORT>/api`
+- Incluye esquemas de bodies/query según DTOs y seguridad **Bearer JWT**.
+- Tras `POST /auth/login`, copia el `accessToken` y en Swagger usa **Authorize** → esquema `JWT` → valor `Bearer <token>` o solo el token, según cómo muestre la UI.
+
+En producción, Swagger queda deshabilitado salvo que definas `ENABLE_SWAGGER=true`.
+
+La tabla de rutas de este README es un índice; el detalle vivo está en Swagger.
+
+## Roles
+
+Definidos en Prisma (`Role`): `admin`, `doctor`, `patient`.
+
+## Rutas REST (resumen)
+
+Prefijo global: ninguno (raíz `/`). Todas bajo el mismo `PORT`.
+
+| Área | Método y ruta | Roles |
+|------|----------------|-------|
+| App | `GET /` | Público (saludo) |
+| Auth | `POST /auth/register` | Público (solo registro `doctor` \| `patient`) |
+| Auth | `POST /auth/login`, `POST /auth/refresh` | Público |
+| Auth | `GET /auth/profile` | JWT |
+| Admin | `GET /admin/prescriptions`, `GET /admin/metrics` | `admin` |
+| Users | `GET /users`, `POST /users` | `admin` |
+| Doctors | `GET /doctors` | `admin` |
+| Patients | `GET /patients` | `admin`, `doctor` |
+| Prescripciones | `POST /prescriptions`, `GET /prescriptions`, `GET /prescriptions/:id` | `doctor` |
+| Prescripciones | `GET /prescriptions/:id/pdf`, `PUT /prescriptions/:id/consume` | `patient` |
+| Paciente | `GET /me/prescriptions`, `GET /me/prescriptions/:id` | `patient` |
+
+## Scripts de base de datos
+
+| Comando | Descripción |
+|---------|-------------|
+| `npm run db:generate` | Genera el cliente Prisma |
+| `npm run db:migrate` | Migraciones en desarrollo |
+| `npm run db:migrate:deploy` | Migraciones en CI/producción |
+| `npm run db:seed` | Ejecuta `prisma/seed.ts` |
+| `npm run db:validate` | Valida el schema |
+
+## Seed de desarrollo
+
+El script `prisma/seed.ts` crea usuarios de prueba (solo para entornos locales):
+
+| Email | Rol | Contraseña (demo) |
+|-------|-----|-------------------|
+| `admin@test.com` | admin | `admin123` |
+| `dr@test.com` | doctor | `dr123` |
+| `patient@test.com` | patient | `patient123` |
+
+No usar estas credenciales en producción.
+
+## Tests y calidad
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run test        # unitarios (Jest)
+npm run test:e2e    # e2e
+npm run lint        # ESLint
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Licencia
 
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+`UNLICENSED` (proyecto privado).

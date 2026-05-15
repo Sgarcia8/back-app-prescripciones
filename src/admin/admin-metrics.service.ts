@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, PrescriptionStatus } from '../../generated/prisma/client';
+import { Prisma, PrescriptionStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminPrescriptionsQueryDto, AdminMetricsQueryDto } from '../prescriptions/dto/admin-prescriptions-query.dto';
 
@@ -74,10 +74,17 @@ export class AdminMetricsService {
       .map(([date, count]) => ({ date, count }));
 
     const topDoctorsResolved = await Promise.all(
-      topDoctors.map(async (t) => ({
-        doctorId: t.authorId,
-        count: t._count.id,
-      })),
+      topDoctors.map(async (t) => {
+        const doc = await this.prisma.doctor.findUnique({
+          where: { id: t.authorId },
+          include: { user: { select: { name: true, email: true } } },
+        });
+        return {
+          doctorId: t.authorId,
+          count: t._count.id,
+          name: doc?.user.name ?? `Doctor #${t.authorId}`,
+        };
+      }),
     );
 
     return {

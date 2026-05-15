@@ -10,8 +10,16 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiProduces,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
-import { Role } from '../../generated/prisma/client';
+import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { RequestUser } from '../auth/jwt-payload';
@@ -21,12 +29,15 @@ import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { DoctorPrescriptionsQueryDto } from './dto/list-prescriptions-query.dto';
 import { PrescriptionsService } from './prescriptions.service';
 
+@ApiTags('Prescriptions')
+@ApiBearerAuth('JWT')
 @Controller('prescriptions')
 @UseGuards(JwtAuthGuard)
 export class PrescriptionsController {
   constructor(private readonly prescriptions: PrescriptionsService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Crear prescripción (médico autenticado)' })
   @UseGuards(RolesGuard)
   @Roles(Role.doctor)
   create(@CurrentUser() user: RequestUser, @Body() dto: CreatePrescriptionDto) {
@@ -34,6 +45,7 @@ export class PrescriptionsController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Listar prescripciones del médico' })
   @UseGuards(RolesGuard)
   @Roles(Role.doctor)
   findAllDoctor(@CurrentUser() user: RequestUser, @Query() q: DoctorPrescriptionsQueryDto) {
@@ -41,6 +53,13 @@ export class PrescriptionsController {
   }
 
   @Get(':id/pdf')
+  @ApiOperation({ summary: 'Descargar PDF de la receta (paciente dueño)' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiProduces('application/pdf')
+  @ApiOkResponse({
+    description: 'PDF de la receta para descarga',
+    schema: { type: 'string', format: 'binary' },
+  })
   @UseGuards(RolesGuard)
   @Roles(Role.patient)
   async pdf(
@@ -55,6 +74,8 @@ export class PrescriptionsController {
   }
 
   @Put(':id/consume')
+  @ApiOperation({ summary: 'Marcar prescripción como dispensada/consumida (paciente)' })
+  @ApiParam({ name: 'id', type: Number })
   @UseGuards(RolesGuard)
   @Roles(Role.patient)
   consume(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
@@ -62,6 +83,8 @@ export class PrescriptionsController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Detalle de prescripción para el médico autor' })
+  @ApiParam({ name: 'id', type: Number })
   @UseGuards(RolesGuard)
   @Roles(Role.doctor)
   findOneDoctor(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {

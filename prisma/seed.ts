@@ -2,8 +2,8 @@ import "dotenv/config";
 import * as bcrypt from "bcrypt";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../generated/prisma/client";
-import type { PrescriptionStatus } from "../generated/prisma/client";
+import { PrismaClient } from '@prisma/client';
+import type { PrescriptionStatus } from '@prisma/client';
 
 const SEED_EMAILS = ["admin@test.com", "dr@test.com", "patient@test.com"] as const;
 const SEED_RX_PREFIX = "SEED-RX-";
