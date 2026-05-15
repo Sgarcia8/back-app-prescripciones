@@ -1,3 +1,7 @@
+/**
+ * HTTP e2e contra un API ya levantado. Requiere E2E_BASE_URL (ej. http://127.0.0.1:3001).
+ * Ver README: sección «E2E contra la API en marcha».
+ */
 import request from 'supertest';
 
 const baseUrl = process.env.E2E_BASE_URL;

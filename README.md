@@ -126,10 +126,34 @@ No usar estas credenciales en producción.
 ## Tests y calidad
 
 ```bash
-npm run test        # unitarios (Jest)
-npm run test:e2e    # e2e
+npm run test        # unitarios (Jest, no requieren PostgreSQL)
+npm run test:e2e    # e2e (ver abajo; sin variables, los casos se omiten)
 npm run lint        # ESLint
 ```
+
+### E2E contra la API en marcha
+
+Los archivos en `test/*.e2e-spec.ts` usan **Supertest como cliente HTTP** contra una instancia real del API (no levantan Nest dentro de Jest).
+
+1. Asegura `DATABASE_URL`, migraciones y, para el flujo completo del caso `prescription workflow`, **`npm run db:seed`** (el bloque opcional de admin usa `admin@test.com` / `admin123`).
+2. Arranca el servidor (`npm run start:dev` en el puerto que uses, p. ej. `PORT=3001`).
+3. Define la URL base y ejecuta e2e:
+
+**PowerShell**
+
+```powershell
+$env:E2E_BASE_URL = "http://127.0.0.1:3001"
+npm run test:e2e
+```
+
+**cmd**
+
+```bat
+set E2E_BASE_URL=http://127.0.0.1:3001
+npm run test:e2e
+```
+
+Si `E2E_BASE_URL` no está definida, las suites e2e quedan en `describe.skip` y el comando termina sin ejecutar esas pruebas.
 
 ## Licencia
 
