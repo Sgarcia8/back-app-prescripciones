@@ -2,6 +2,10 @@
 
 API REST con NestJS para usuarios (admin, médico, paciente), autenticación JWT, prescripciones, PDF y QR. Persistencia con PostgreSQL vía Prisma.
 
+## URL Despliegue
+
+> **App backend prescripciones**: https://back-app-prescripciones.onrender.com/
+
 ## Stack
 
 | Tecnología | Uso |
@@ -126,8 +130,8 @@ No usar estas credenciales en producción.
 ## Tests y calidad
 
 ```bash
-npm run test        # unitarios (Jest, no requieren PostgreSQL)
-npm run test:e2e    # e2e (ver abajo; sin variables, los casos se omiten)
+npm run test        # unitarios
+npm run test:e2e    # e2e
 npm run lint        # ESLint
 ```
 
